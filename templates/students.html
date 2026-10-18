@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Students Directory{% endblock %}
+{% block page_title %}Student Records Directory{% endblock %}
+{% block page_subtitle %}Comprehensive student management, filtering, and embedded performance data{% endblock %}
+
+{% block content %}
+<!-- Search & Filter Card -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('students.list_students') }}" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-muted">Search</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                    <input type="text" name="q" class="form-control" placeholder="ID, name, or email..." value="{{ selected_query }}">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold text-muted">Department</label>
+                <select name="department" class="form-select">
+                    <option value="">All Departments</option>
+                    {% for dept in departments %}
+                        <option value="{{ dept }}" {% if selected_dept == dept %}selected{% endif %}>{{ dept }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold text-muted">Semester</label>
+                <select name="semester" class="form-select">
+                    <option value="">All Semesters</option>
+                    {% for sem in semesters %}
+                        <option value="{{ sem }}" {% if selected_sem == (sem|string) %}selected{% endif %}>Semester {{ sem }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-muted">Attendance Range (%)</label>
+                <div class="input-group">
+                    <input type="number" name="min_attendance" class="form-control" placeholder="Min" min="0" max="100" value="{{ selected_min_att }}">
+                    <span class="input-group-text bg-white text-muted">to</span>
+                    <input type="number" name="max_attendance" class="form-control" placeholder="Max" min="0" max="100" value="{{ selected_max_att }}">
+                </div>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fa-solid fa-filter me-1"></i> Filter
+                </button>
+                <a href="{{ url_for('students.list_students') }}" class="btn btn-outline-secondary" title="Reset Filters">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Students Table Card -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex align-items-center gap-2">
+            <h5 class="mb-0">Students Catalog</h5>
+            <span class="badge bg-light text-dark border">{{ total }} Records Found</span>
+        </div>
+        <a href="{{ url_for('students.add_student') }}" class="btn btn-sm btn-primary">
+            <i class="fa-solid fa-user-plus me-1"></i> Register Student
+        </a>
+    </div>
+    <div class="card-body p-0">
+        {% if students %}
+            <div class="table-responsive">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Student ID</th>
+                            <th>Full Name</th>
+                            <th>Email Address</th>
+                            <th>Department</th>
+                            <th>Semester</th>
+                            <th>Attendance</th>
+                            <th>Enrolled Courses</th>
+                            <th>Skills</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in students %}
+                        <tr>
+                            <td><code>#{{ s._id }}</code></td>
+                            <td>
+                                <a href="{{ url_for('students.student_detail', student_id=s._id) }}" class="fw-bold text-decoration-none">
+                                    {{ s.name }}
+                                </a>
+                            </td>
+                            <td><small class="text-muted">{{ s.email }}</small></td>
+                            <td><span class="badge-custom badge-info">{{ s.department }}</span></td>
+                            <td>Sem {{ s.semester }}</td>
+                            <td>
+                                <span class="badge-custom {% if s.attendance < 75 %}badge-danger{% elif s.attendance < 85 %}badge-warning{% else %}badge-success{% endif %}">
+                                    {{ s.attendance }}%
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    {{ s.marks|length if s.marks else 0 }} Courses
+                                </span>
+                            </td>
+                            <td>
+                                {% if s.skills %}
+                                    <small class="text-secondary">{{ s.skills[:2]|join(', ') }}{% if s.skills|length > 2 %} +{{ s.skills|length - 2 }}{% endif %}</small>
+                                {% else %}
+                                    <small class="text-muted">None</small>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('students.student_detail', student_id=s._id) }}" class="btn btn-light border" title="View Profile">
+                                        <i class="fa-solid fa-eye text-primary"></i>
+                                    </a>
+                                    <a href="{{ url_for('students.edit_student', student_id=s._id) }}" class="btn btn-light border" title="Edit Student">
+                                        <i class="fa-solid fa-pen-to-square text-secondary"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-light border text-danger" title="Delete Student" data-bs-toggle="modal" data-bs-target="#deleteModal{{ s._id }}">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Delete Confirmation Modal -->
+                                <div class="modal fade text-start" id="deleteModal{{ s._id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Confirm Deletion</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                Are you sure you want to delete student <strong>{{ s.name }}</strong> (ID: <code>{{ s._id }}</code>)?
+                                                <div class="alert alert-warning mt-3 small mb-0">
+                                                    This will execute PyMongo <code>delete_one({'_id': {{ s._id }}})</code>. This action cannot be undone.
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <form method="POST" action="{{ url_for('students.delete_student_view', student_id=s._id) }}">
+                                                    <button type="submit" class="btn btn-danger">Confirm Delete</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Bar -->
+            {% if total_pages > 1 %}
+            <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+                <small class="text-muted">Showing page {{ page }} of {{ total_pages }}</small>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('students.list_students', page=page-1, q=selected_query, department=selected_dept, semester=selected_sem, min_attendance=selected_min_att, max_attendance=selected_max_att) }}">Previous</a>
+                        </li>
+                        {% for p in range(1, total_pages + 1) %}
+                            <li class="page-item {% if p == page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('students.list_students', page=p, q=selected_query, department=selected_dept, semester=selected_sem, min_attendance=selected_min_att, max_attendance=selected_max_att) }}">{{ p }}</a>
+                            </li>
+                        {% endfor %}
+                        <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('students.list_students', page=page+1, q=selected_query, department=selected_dept, semester=selected_sem, min_attendance=selected_min_att, max_attendance=selected_max_att) }}">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+
+        {% else %}
+            <div class="empty-state">
+                <i class="fa-solid fa-users-slash text-muted"></i>
+                <h4>No Matching Student Records</h4>
+                <p class="text-muted">No students matched the active search filters. Try widening your filter parameters.</p>
+                <a href="{{ url_for('students.list_students') }}" class="btn btn-outline-primary btn-sm">Clear All Filters</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

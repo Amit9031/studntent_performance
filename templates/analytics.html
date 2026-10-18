@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics & Machine Learning{% endblock %}
+{% block page_title %}MongoDB Aggregation Analytics & ML{% endblock %}
+{% block page_subtitle %}In-depth academic metrics computed via MongoDB Aggregation Pipelines 1 through 8{% endblock %}
+
+{% block content %}
+<!-- Aggregation Pipeline Status Banner -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card p-3 bg-white h-100">
+            <small class="text-muted fw-bold">PIPELINE 3 ($group)</small>
+            <h5 class="mb-0 text-primary">{{ dept_stats|length }} Departments</h5>
+            <small class="text-secondary">Grouped by department code</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 bg-white h-100">
+            <small class="text-muted fw-bold">PIPELINE 5 ($lookup)</small>
+            <h5 class="mb-0 text-success">{{ course_stats|length }} Courses Analyzed</h5>
+            <small class="text-secondary">Cross-collection joined stats</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 bg-white h-100">
+            <small class="text-muted fw-bold">PIPELINE 6 ($unwind)</small>
+            <h5 class="mb-0 text-purple" style="color: #9333ea;">{{ skills|length }} Unique Skills</h5>
+            <small class="text-secondary">Deconstructed skill arrays</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 bg-white h-100">
+            <small class="text-muted fw-bold">PIPELINE 7 ($switch)</small>
+            <h5 class="mb-0 text-danger">{{ at_risk|length }} At-Risk Flagged</h5>
+            <small class="text-secondary">Attendance &lt; 75% | Marks &lt; 40</small>
+        </div>
+    </div>
+</div>
+
+<!-- Row 1: Charts (Department Performance & Performance Categories) -->
+<div class="row g-4 mb-4">
+    <!-- Chart 1: Department Performance -->
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0"><i class="fa-solid fa-chart-column text-primary me-2"></i>Department Performance</h5>
+                    <small class="text-muted">Pipeline 3: $project &rarr; $group &rarr; $round</small>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="deptPerformanceChart" height="220"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 2: Performance Categories -->
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0"><i class="fa-solid fa-chart-pie text-success me-2"></i>Grade Distribution</h5>
+                    <small class="text-muted">Pipeline 7: $project with $switch</small>
+                </div>
+            </div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <div style="width: 100%; max-width: 320px;">
+                    <canvas id="categoriesChart" height="240"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Row 2: Charts (Course Averages with $lookup & Skill Distribution with $unwind) -->
+<div class="row g-4 mb-4">
+    <!-- Chart 3: Course-wise Statistics -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0"><i class="fa-solid fa-layer-group text-info me-2"></i>Course-wise Score Metrics</h5>
+                    <small class="text-muted">Pipeline 5: $objectToArray &rarr; $unwind &rarr; $group &rarr; $lookup</small>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="courseStatsChart" height="220"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 4: Skill Distribution -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0"><i class="fa-solid fa-code text-warning me-2"></i>Top Technical Skills Distribution</h5>
+                    <small class="text-muted">Pipeline 6: $unwind: "$skills" &rarr; $group &rarr; $sort</small>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="skillsChart" height="220"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Row 3: Scikit-Learn Predictive Model Evaluation Card -->
+<div class="card mb-4 border-primary">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-0 text-primary"><i class="fa-solid fa-brain me-2"></i>Intelligent Analytics: Scikit-Learn Model Evaluation</h5>
+            <small class="text-muted">Supervised Machine Learning module for academic risk prediction (CSE494 Optional Extension)</small>
+        </div>
+        <span class="badge bg-primary">Random Forest Classifier</span>
+    </div>
+    <div class="card-body">
+        {% if ml_metrics and ml_metrics.get('accuracy') is not none %}
+            <div class="row g-3 mb-3">
+                <div class="col-md-3">
+                    <div class="border rounded p-3 text-center bg-light">
+                        <small class="text-muted fw-bold">TEST ACCURACY</small>
+                        <h3 class="mb-0 text-success">{{ (ml_metrics.accuracy * 100)|round(1) }}%</h3>
+                        <small class="text-muted">Held-out test split (25%)</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-3 text-center bg-light">
+                        <small class="text-muted fw-bold">PRECISION</small>
+                        <h3 class="mb-0 text-primary">{{ (ml_metrics.precision * 100)|round(1) }}%</h3>
+                        <small class="text-muted">True positives / predicted</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-3 text-center bg-light">
+                        <small class="text-muted fw-bold">RECALL</small>
+                        <h3 class="mb-0 text-info">{{ (ml_metrics.recall * 100)|round(1) }}%</h3>
+                        <small class="text-muted">Sensitivity to at-risk cases</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="border rounded p-3 text-center bg-light">
+                        <small class="text-muted fw-bold">F1-SCORE</small>
+                        <h3 class="mb-0 text-purple" style="color: #9333ea;">{{ (ml_metrics.f1_score * 100)|round(1) }}%</h3>
+                        <small class="text-muted">Harmonic mean</small>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <h6 class="fw-bold small text-secondary">FEATURE IMPORTANCES (GINI IMPURITY):</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0 small">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Feature Name</th>
+                                    <th>Importance Weight</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for feat, weight in ml_metrics.get('feature_importances', {}).items() %}
+                                    <tr>
+                                        <td><code>{{ feat }}</code></td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="progress flex-grow-1" style="height: 6px;">
+                                                    <div class="progress-bar bg-info" style="width: {{ weight * 100 }}%"></div>
+                                                </div>
+                                                <span>{{ (weight * 100)|round(1) }}%</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="fw-bold small text-secondary">ACADEMIC & ETHICAL NOTICE:</h6>
+                    <div class="alert alert-warning small mb-0">
+                        {{ ml_metrics.get('limitation_note') }}
+                        <div class="mt-2">
+                            <strong>Features:</strong> <code>attendance</code>, <code>avg_marks</code>, <code>semester</code>, <code>num_courses</code>, <code>num_skills</code>.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="empty-state py-3">
+                <p class="text-muted mb-0">Model training initialized with database records.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Row 4: Detailed Analytical Tables -->
+<div class="row g-4">
+    <!-- Topper Leaderboard (Pipeline 2) -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5><i class="fa-solid fa-trophy text-warning me-2"></i>Topper Ranking (Pipeline 2)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Student</th>
+                                <th>Dept</th>
+                                <th>Attendance</th>
+                                <th>Average Mark</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in toppers %}
+                            <tr>
+                                <td>
+                                    {% if loop.index == 1 %}
+                                        <span class="badge bg-warning text-dark"><i class="fa-solid fa-crown"></i> 1st</span>
+                                    {% elif loop.index <= 3 %}
+                                        <span class="badge bg-secondary">#{{ loop.index }}</span>
+                                    {% else %}
+                                        <span class="badge bg-light text-dark">#{{ loop.index }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('students.student_detail', student_id=t._id) }}" class="fw-bold text-decoration-none">
+                                        {{ t.name }}
+                                    </a>
+                                </td>
+                                <td><span class="badge-custom badge-info">{{ t.department }}</span></td>
+                                <td>{{ t.attendance }}%</td>
+                                <td><strong class="text-success">{{ t.average_marks }}%</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Semester-wise Distribution (Pipeline 8) -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5><i class="fa-solid fa-calendar-days text-info me-2"></i>Semester-wise Breakdown (Pipeline 8)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th>Semester</th>
+                                <th>Department</th>
+                                <th>Enrolled</th>
+                                <th>Avg Marks</th>
+                                <th>Avg Attendance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sem in semester_stats %}
+                            <tr>
+                                <td><strong>Semester {{ sem.semester }}</strong></td>
+                                <td><span class="badge-custom badge-info">{{ sem.department }}</span></td>
+                                <td>{{ sem.student_count }} Students</td>
+                                <td>{{ sem.avg_marks }}%</td>
+                                <td>{{ sem.avg_attendance }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Data injected directly from MongoDB Aggregation Pipelines
+const deptStatsData = {{ dept_stats|tojson }};
+const categoriesData = {{ categories|tojson }};
+const courseStatsData = {{ course_stats|tojson }};
+const skillsData = {{ skills|tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+{% endblock %}

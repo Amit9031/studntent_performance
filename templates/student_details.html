@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}Student #{{ student._id }} - {{ student.name }}{% endblock %}
+{% block page_title %}Student Academic Profile{% endblock %}
+{% block page_subtitle %}Detailed transcript, embedded marks, and AI risk prediction report{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Left Column: Profile Card & Skills -->
+    <div class="col-lg-4">
+        <!-- Profile Overview Card -->
+        <div class="card mb-4">
+            <div class="card-body text-center p-4">
+                <div class="mx-auto mb-3 d-flex align-items-center justify-content-center rounded-circle bg-light border text-primary" style="width: 72px; height: 72px; font-size: 2rem;">
+                    <i class="fa-solid fa-user-graduate"></i>
+                </div>
+                <h4 class="mb-1">{{ student.name }}</h4>
+                <p class="text-muted small mb-2"><i class="fa-solid fa-envelope me-1"></i> {{ student.email }}</p>
+                <div class="d-flex justify-content-center gap-2 mb-3">
+                    <span class="badge-custom badge-info">{{ student.department }}</span>
+                    <span class="badge-custom badge-secondary">Semester {{ student.semester }}</span>
+                    <span class="badge-custom badge-primary">ID: #{{ student._id }}</span>
+                </div>
+
+                <!-- Attendance Progress -->
+                <div class="border rounded p-3 bg-light text-start mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="fw-bold">Overall Attendance</small>
+                        <strong class="{% if student.attendance < 75 %}text-danger{% else %}text-success{% endif %}">
+                            {{ student.attendance }}%
+                        </strong>
+                    </div>
+                    <div class="progress progress-slim">
+                        <div class="progress-bar {% if student.attendance < 75 %}bg-danger{% elif student.attendance < 85 %}bg-warning{% else %}bg-success{% endif %}"
+                             role="progressbar" style="width: {{ student.attendance }}%"></div>
+                    </div>
+                    <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                        {% if student.attendance < 75 %}
+                            <i class="fa-solid fa-circle-exclamation text-danger me-1"></i> Below university mandatory 75% threshold
+                        {% else %}
+                            <i class="fa-solid fa-circle-check text-success me-1"></i> Meets university attendance norms
+                        {% endif %}
+                    </small>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('students.edit_student', student_id=student._id) }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fa-solid fa-pen-to-square me-1"></i> Edit Profile
+                    </a>
+                    <a href="{{ url_for('students.list_students') }}" class="btn btn-light border btn-sm">
+                        <i class="fa-solid fa-arrow-left me-1"></i> Back to Directory
+                    </a>
+                </div>
+            </div>
+            <div class="card-footer bg-white border-top small text-muted">
+                <i class="fa-solid fa-clock me-1"></i> Created: {{ student.created_at }}
+            </div>
+        </div>
+
+        <!-- Technical Skills Card -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fa-solid fa-tags text-primary me-2"></i>Technical Skills</h5>
+            </div>
+            <div class="card-body">
+                {% if student.skills %}
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for skill in student.skills %}
+                            <span class="badge bg-light text-dark border px-2 py-1">
+                                <i class="fa-solid fa-code text-info me-1"></i> {{ skill }}
+                            </span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted small mb-0">No technical skills listed.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Risk Analytics & Course Marks -->
+    <div class="col-lg-8">
+        <!-- Intelligent Academic Risk Analysis Box -->
+        <div class="card mb-4 border-{% if 'High' in risk_report.rule_evaluation.risk_level %}danger{% elif 'Moderate' in risk_report.rule_evaluation.risk_level %}warning{% else %}success{% endif %}">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fa-solid fa-brain text-primary me-2"></i>Intelligent Academic Risk Evaluation
+                </h5>
+                <span class="badge-custom {{ risk_report.rule_evaluation.risk_level|risk_badge_class }} fs-6">
+                    {{ risk_report.rule_evaluation.risk_level }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Rule-Based System Tier -->
+                    <div class="col-md-6 border-end">
+                        <h6 class="fw-bold text-secondary mb-2">
+                            <i class="fa-solid fa-list-check me-1"></i> Deterministic Rule-Based Assessment
+                        </h6>
+                        <ul class="list-unstyled mb-2 small">
+                            {% for r in risk_report.rule_evaluation.reasons %}
+                                <li class="mb-1 text-{% if 'Low' in risk_report.rule_evaluation.risk_level %}success{% else %}danger{% endif %}">
+                                    <i class="fa-solid {% if 'Low' in risk_report.rule_evaluation.risk_level %}fa-check{% else %}fa-exclamation{% endif %} me-1"></i>
+                                    {{ r }}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        <div class="alert alert-light border small mb-0">
+                            <strong>Recommendation:</strong> {{ risk_report.rule_evaluation.recommendation }}
+                        </div>
+                    </div>
+
+                    <!-- Machine Learning Classifier Tier -->
+                    <div class="col-md-6">
+                        <h6 class="fw-bold text-secondary mb-2">
+                            <i class="fa-solid fa-robot me-1"></i> Scikit-Learn Model Prediction
+                        </h6>
+                        {% if risk_report.ml_prediction %}
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span>Model Classification:</span>
+                                    <strong class="{% if risk_report.ml_prediction.predicted_label == 'At Risk' %}text-danger{% else %}text-success{% endif %}">
+                                        {{ risk_report.ml_prediction.predicted_label }}
+                                    </strong>
+                                </div>
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span>Risk Probability:</span>
+                                    <strong>{{ (risk_report.ml_prediction.risk_probability * 100)|round(1) }}%</strong>
+                                </div>
+                                <div class="d-flex justify-content-between small mb-2">
+                                    <span>Confidence Score:</span>
+                                    <span class="badge bg-secondary">{{ risk_report.ml_prediction.confidence_score }}%</span>
+                                </div>
+                            </div>
+                            <div class="progress progress-slim">
+                                <div class="progress-bar {% if risk_report.ml_prediction.predicted_label == 'At Risk' %}bg-danger{% else %}bg-success{% endif %}"
+                                     style="width: {{ risk_report.ml_prediction.risk_probability * 100 }}%"></div>
+                            </div>
+                        {% else %}
+                            <small class="text-muted">Model training pending.</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Academic Transcript & Embedded Marks -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fa-solid fa-book-bookmark text-primary me-2"></i>Course Marks Breakdown
+                </h5>
+                <span class="badge bg-primary">Average: {{ risk_report.avg_marks }}%</span>
+            </div>
+            <div class="card-body p-0">
+                {% if student.marks %}
+                    <div class="table-responsive">
+                        <table class="table-custom">
+                            <thead>
+                                <tr>
+                                    <th>Course Code</th>
+                                    <th>Course Title</th>
+                                    <th>Credits</th>
+                                    <th>Score</th>
+                                    <th>Visual Performance</th>
+                                    <th>Standing</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for code, mark in student.marks.items() %}
+                                    {% set c_info = courses_map.get(code, {}) %}
+                                    <tr>
+                                        <td><strong>{{ code }}</strong></td>
+                                        <td>{{ c_info.get('course_name', 'Elective Subject') }}</td>
+                                        <td>{{ c_info.get('credits', 'N/A') }}</td>
+                                        <td><strong>{{ mark }}</strong> / 100</td>
+                                        <td style="width: 25%;">
+                                            <div class="progress progress-slim">
+                                                <div class="progress-bar {% if mark >= 80 %}bg-success{% elif mark >= 60 %}bg-primary{% elif mark >= 40 %}bg-warning{% else %}bg-danger{% endif %}"
+                                                     style="width: {{ mark }}%"></div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if mark >= 90 %}
+                                                <span class="badge-custom badge-success">Outstanding (A+)</span>
+                                            {% elif mark >= 75 %}
+                                                <span class="badge-custom badge-primary">Good (A/B)</span>
+                                            {% elif mark >= 60 %}
+                                                <span class="badge-custom badge-info">Average (C)</span>
+                                            {% elif mark >= 40 %}
+                                                <span class="badge-custom badge-warning">Pass (D)</span>
+                                            {% else %}
+                                                <span class="badge-custom badge-danger">Fail (F)</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="empty-state py-4">
+                        <p class="text-muted mb-0">No course marks registered for this student yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Raw MongoDB Document Viewer Accordion -->
+        <div class="accordion" id="mongoDocAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingOne">
+                    <button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDoc">
+                        <i class="fa-solid fa-code text-info me-2"></i> Inspect Raw BSON/JSON Document from MongoDB
+                    </button>
+                </h2>
+                <div id="collapseDoc" class="accordion-collapse collapse" data-bs-parent="#mongoDocAccordion">
+                    <div class="accordion-body bg-dark text-light p-3 rounded-bottom font-monospace small" style="max-height: 250px; overflow-y: auto;">
+                        <pre class="text-light mb-0">{{ student }}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

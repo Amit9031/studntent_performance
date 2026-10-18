@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Course Catalog{% endblock %}
+{% block page_title %}Academic Course Catalog{% endblock %}
+{% block page_subtitle %}Courses collection schema, referencing relationships, and credit structures{% endblock %}
+
+{% block content %}
+<!-- Filter and Add Course Action -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-6">
+                <form method="GET" action="{{ url_for('courses.list_courses') }}" class="d-flex gap-2">
+                    <input type="text" name="q" class="form-control" placeholder="Search course by code or title..." value="{{ selected_search }}">
+                    <select name="department" class="form-select" style="max-width: 180px;">
+                        <option value="">All Departments</option>
+                        {% for d in departments %}
+                            <option value="{{ d }}" {% if selected_dept == d %}selected{% endif %}>{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-outline-primary">Filter</button>
+                    {% if selected_dept or selected_search %}
+                        <a href="{{ url_for('courses.list_courses') }}" class="btn btn-light border" title="Reset"><i class="fa-solid fa-rotate-right"></i></a>
+                    {% endif %}
+                </form>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCourseModal">
+                    <i class="fa-solid fa-plus me-1"></i> Add New Course
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Courses Grid / Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Course Offerings (<code>courses</code> collection)</h5>
+        <span class="badge bg-light text-dark border">{{ courses|length }} Courses Registered</span>
+    </div>
+    <div class="card-body p-0">
+        {% if courses %}
+            <div class="table-responsive">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Course Code (_id)</th>
+                            <th>Course Title</th>
+                            <th>Credits</th>
+                            <th>Department</th>
+                            <th>Description</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in courses %}
+                        <tr>
+                            <td><code>{{ c._id }}</code></td>
+                            <td><strong>{{ c.course_name }}</strong></td>
+                            <td><span class="badge bg-secondary">{{ c.credits }} Credits</span></td>
+                            <td><span class="badge-custom badge-info">{{ c.department }}</span></td>
+                            <td class="text-muted small" style="max-width: 320px;">{{ c.description or 'No syllabus description provided.' }}</td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-light border text-secondary" data-bs-toggle="modal" data-bs-target="#editCourseModal{{ c._id }}" title="Edit Course">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-light border text-danger" data-bs-toggle="modal" data-bs-target="#deleteCourseModal{{ c._id }}" title="Delete Course">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Edit Modal -->
+                                <div class="modal fade text-start" id="editCourseModal{{ c._id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Edit Course {{ c._id }}</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <form method="POST" action="{{ url_for('courses.edit_course_view', course_id=c._id) }}">
+                                                <div class="modal-body">
+                                                    <div class="mb-3">
+                                                        <label class="form-label small fw-bold">Course Title</label>
+                                                        <input type="text" name="course_name" class="form-control" value="{{ c.course_name }}" required>
+                                                    </div>
+                                                    <div class="row g-2 mb-3">
+                                                        <div class="col-md-6">
+                                                            <label class="form-label small fw-bold">Credits (1-10)</label>
+                                                            <input type="number" name="credits" class="form-control" min="1" max="10" value="{{ c.credits }}" required>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label small fw-bold">Department</label>
+                                                            <input type="text" name="department" class="form-control" value="{{ c.department }}" required>
+                                                        </div>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label small fw-bold">Description</label>
+                                                        <textarea name="description" class="form-control" rows="3">{{ c.description }}</textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                                    <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Delete Modal -->
+                                <div class="modal fade text-start" id="deleteCourseModal{{ c._id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Delete Course</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                Are you sure you want to delete course <strong>{{ c.course_name }}</strong> (<code>{{ c._id }}</code>)?
+                                                <div class="alert alert-warning small mt-3 mb-0">
+                                                    Safety check: Courses with active student marks will be rejected from deletion.
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                                <form method="POST" action="{{ url_for('courses.delete_course_view', course_id=c._id) }}">
+                                                    <button type="submit" class="btn btn-danger btn-sm">Confirm Delete</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state py-5">
+                <i class="fa-solid fa-book-open text-muted"></i>
+                <h4>No Courses Found</h4>
+                <p class="text-muted">No courses currently exist in the collection.</p>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCourseModal">Add Course</button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Course Modal -->
+<div class="modal fade" id="addCourseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fa-solid fa-plus text-primary me-2"></i>Register New Course</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('courses.add_course_view') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Course Code (_id) <span class="text-danger">*</span></label>
+                        <input type="text" name="_id" class="form-control" placeholder="e.g. CSE494" required>
+                        <div class="form-text small">Unique string identifier used for cross-collection referencing.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Course Name <span class="text-danger">*</span></label>
+                        <input type="text" name="course_name" class="form-control" placeholder="e.g. Intelligent NoSQL Databases" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Credits <span class="text-danger">*</span></label>
+                            <input type="number" name="credits" class="form-control" min="1" max="10" value="4" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Department <span class="text-danger">*</span></label>
+                            <select name="department" class="form-select" required>
+                                <option value="CSE">CSE</option>
+                                <option value="IT">IT</option>
+                                <option value="ECE">ECE</option>
+                                <option value="ME">ME</option>
+                                <option value="AIDS">AIDS</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Course Description</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="Syllabus topics, objectives, prerequisites..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Add Course</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

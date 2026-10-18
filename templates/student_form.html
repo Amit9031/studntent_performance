@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}{% if mode == 'create' %}Register New Student{% else %}Edit Student #{{ student._id }}{% endif %}{% endblock %}
+{% block page_title %}{% if mode == 'create' %}Register New Student{% else %}Edit Student Record{% endif %}{% endblock %}
+{% block page_subtitle %}Database-level and schema validation enforced by MongoDB $jsonSchema{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fa-solid {% if mode == 'create' %}fa-user-plus text-primary{% else %}fa-user-pen text-secondary{% endif %} me-2"></i>
+                    {% if mode == 'create' %}New Student Profile Registration{% else %}Modify Profile for {{ student.name }} (ID: {{ student._id }}){% endif %}
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{% if mode == 'create' %}{{ url_for('students.add_student') }}{% else %}{{ url_for('students.edit_student', student_id=student._id) }}{% endif %}">
+                    <!-- Basic Information Section -->
+                    <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">
+                        <i class="fa-solid fa-id-card me-1"></i> 1. Demographic & Enrollment Details
+                    </h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">Student ID (_id) <span class="text-danger">*</span></label>
+                            <input type="number" name="_id" class="form-control {% if errors.get('_id') %}is-invalid{% endif %}"
+                                   placeholder="e.g. 150"
+                                   value="{{ form_data.get('_id', '') }}"
+                                   {% if mode == 'edit' %}readonly disabled{% endif %} required>
+                            {% if errors.get('_id') %}
+                                <div class="invalid-feedback">{{ errors.get('_id') }}</div>
+                            {% else %}
+                                <div class="form-text small">Unique numeric identifier stored as BSON int/long.</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control {% if errors.get('name') %}is-invalid{% endif %}"
+                                   placeholder="e.g. Amit Ranjan"
+                                   value="{{ form_data.get('name', '') }}" required>
+                            {% if errors.get('name') %}
+                                <div class="invalid-feedback">{{ errors.get('name') }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">Email Address <span class="text-danger">*</span></label>
+                            <input type="email" name="email" class="form-control {% if errors.get('email') %}is-invalid{% endif %}"
+                                   placeholder="e.g. amit@example.com"
+                                   value="{{ form_data.get('email', '') }}" required>
+                            {% if errors.get('email') %}
+                                <div class="invalid-feedback">{{ errors.get('email') }}</div>
+                            {% else %}
+                                <div class="form-text small">Unique constraint enforced by <code>uniq_idx_email</code>.</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">Department <span class="text-danger">*</span></label>
+                            <select name="department" class="form-select {% if errors.get('department') %}is-invalid{% endif %}" required>
+                                <option value="">Select Department</option>
+                                {% for d in ["CSE", "IT", "ECE", "ME", "EE", "CE", "AIDS", "AIML"] %}
+                                    <option value="{{ d }}" {% if form_data.get('department') == d %}selected{% endif %}>{{ d }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if errors.get('department') %}
+                                <div class="invalid-feedback">{{ errors.get('department') }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">Semester <span class="text-danger">*</span></label>
+                            <input type="number" name="semester" class="form-control {% if errors.get('semester') %}is-invalid{% endif %}"
+                                   min="1" max="12"
+                                   placeholder="1 - 12"
+                                   value="{{ form_data.get('semester', '') }}" required>
+                            {% if errors.get('semester') %}
+                                <div class="invalid-feedback">{{ errors.get('semester') }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">Attendance Percentage (%) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.1" name="attendance" class="form-control {% if errors.get('attendance') %}is-invalid{% endif %}"
+                                   min="0" max="100"
+                                   placeholder="0.0 - 100.0"
+                                   value="{{ form_data.get('attendance', '') }}" required>
+                            {% if errors.get('attendance') %}
+                                <div class="invalid-feedback">{{ errors.get('attendance') }}</div>
+                            {% else %}
+                                <div class="form-text small">Benchmark threshold: &lt; 75% flags student as At-Risk.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Embedded Course Marks Section -->
+                    <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">
+                        <i class="fa-solid fa-file-pen me-1"></i> 2. Academic Course Marks (Embedded Document: <code>marks</code>)
+                    </h6>
+                    <p class="small text-muted mb-3">
+                        Demonstrates MongoDB embedded document pattern: marks are stored as key-value pairs (Course Code &rarr; Score) directly inside the student record.
+                    </p>
+                    <div class="row g-3 mb-4">
+                        {% set current_marks = form_data.get('marks', {}) %}
+                        {% for course in courses %}
+                            <div class="col-md-4 col-sm-6">
+                                <div class="card p-2 h-100 bg-light border">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <strong class="small text-dark">{{ course._id }}</strong>
+                                        <span class="badge bg-secondary" style="font-size: 0.7rem;">{{ course.credits }} Credits</span>
+                                    </div>
+                                    <small class="text-muted text-truncate d-block mb-2">{{ course.course_name }}</small>
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-white">Marks</span>
+                                        <input type="number" step="0.1" min="0" max="100"
+                                               name="mark_{{ course._id }}"
+                                               class="form-control"
+                                               placeholder="0 - 100"
+                                               value="{{ current_marks.get(course._id, '') }}">
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Skills Array Section -->
+                    <h6 class="text-primary fw-bold mb-3 border-bottom pb-2">
+                        <i class="fa-solid fa-tags me-1"></i> 3. Technical Skills (BSON Array: <code>skills</code>)
+                    </h6>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small">Skills (Comma-separated)</label>
+                        {% set existing_skills = form_data.get('skills', []) %}
+                        <input type="text" name="skills" class="form-control"
+                               placeholder="e.g. Python, MongoDB, Machine Learning, Docker, SQL"
+                               value="{% if existing_skills is string %}{{ existing_skills }}{% else %}{{ existing_skills|join(', ') }}{% endif %}">
+                        <div class="form-text small">Each skill becomes an element in the BSON array, analyzed via <code>$unwind</code> in Pipeline 6.</div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <a href="{{ url_for('students.list_students') }}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="fa-solid fa-floppy-disk me-1"></i>
+                            {% if mode == 'create' %}Register Student Record{% else %}Update Student Profile{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
